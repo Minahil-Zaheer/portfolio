@@ -1,13 +1,60 @@
 // ===== Footer year =====
 document.getElementById('year').textContent = new Date().getFullYear();
 
+// ===== Reading progress =====
+const scrollProgress = document.getElementById('scrollProgress');
+let progressTicking = false;
+window.addEventListener('scroll', () => {
+  if (progressTicking) return;
+  progressTicking = true;
+  requestAnimationFrame(() => {
+    const scrollable = document.documentElement.scrollHeight - window.innerHeight;
+    const progress = scrollable > 0 ? (window.scrollY / scrollable) * 100 : 0;
+    scrollProgress.style.width = `${progress}%`;
+    progressTicking = false;
+  });
+}, { passive: true });
+
+// ===== Desktop cursor glow =====
+if (window.matchMedia('(hover: hover) and (pointer: fine)').matches &&
+    !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const cursorGlow = document.createElement('div');
+  cursorGlow.className = 'cursor-glow';
+  cursorGlow.setAttribute('aria-hidden', 'true');
+  document.body.append(cursorGlow);
+
+  window.addEventListener('pointermove', (event) => {
+    cursorGlow.style.setProperty('--cursor-x', `${event.clientX}px`);
+    cursorGlow.style.setProperty('--cursor-y', `${event.clientY}px`);
+    cursorGlow.classList.add('is-visible');
+    cursorGlow.classList.toggle('is-hovering', Boolean(event.target.closest('a, button, input, textarea')));
+  });
+
+  window.addEventListener('pointerleave', () => cursorGlow.classList.remove('is-visible'));
+}
+
 // ===== Mobile nav toggle =====
 const navToggle = document.getElementById('navToggle');
 const navTabs = document.getElementById('navTabs');
+const navIndicator = document.createElement('span');
+navIndicator.className = 'tabbar__indicator';
+navIndicator.setAttribute('aria-hidden', 'true');
+navTabs.append(navIndicator);
+
+const moveNavIndicator = () => {
+  const activeTab = navTabs.querySelector('.tab.is-active');
+  if (!activeTab || window.matchMedia('(max-width: 720px)').matches) return;
+  navIndicator.style.width = `${activeTab.offsetWidth}px`;
+  navIndicator.style.transform = `translateX(${activeTab.offsetLeft}px)`;
+};
+
+requestAnimationFrame(moveNavIndicator);
+window.addEventListener('resize', moveNavIndicator);
 
 navToggle.addEventListener('click', () => {
   const isOpen = navTabs.classList.toggle('is-open');
   navToggle.setAttribute('aria-expanded', isOpen);
+  if (isOpen) requestAnimationFrame(moveNavIndicator);
 });
 
 // Close mobile menu after clicking a link
@@ -26,6 +73,7 @@ const setActiveTab = (id) => {
   tabs.forEach(tab => {
     tab.classList.toggle('is-active', tab.getAttribute('href') === `#${id}`);
   });
+  moveNavIndicator();
 };
 
 const navObserver = new IntersectionObserver((entries) => {
